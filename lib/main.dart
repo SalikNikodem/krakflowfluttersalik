@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'task_repository.dart';
+import 'services/task_api_service.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -14,16 +14,112 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'KrakFlow',
-      home: const HomeScreen(),
+      home: const TaskListScreen(),
     );
   }
 }
+
+class TaskListScreen extends StatefulWidget {
+  const TaskListScreen({super.key});
+
+  @override
+  State<TaskListScreen> createState() => _TaskListScreenState();
+}
+
+class _TaskListScreenState extends State<TaskListScreen> {
+  late Future<List<Task>> tasksFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    tasksFuture = TaskApiService.fetchTasks();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("KrakFlow - Zadania z API"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() {
+                tasksFuture = TaskApiService.fetchTasks();
+              });
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.storage),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HomeScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: FutureBuilder<List<Task>>(
+        future: tasksFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+          else if (snapshot.hasError) {
+            return Center(
+              child: Text("Błąd: ${snapshot.error}"),
+            );
+          }
+          else {
+            final tasks = snapshot.data ?? [];
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Pobrano ${tasks.length} zadań z DummyJSON",
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: tasks.length,
+                      itemBuilder: (context, index) {
+                        final task = tasks[index];
+                        return TaskCard(
+                          title: task.title,
+                          subtitle: "Status: ${task.done ? 'Wykonane' : 'Do zrobienia'}",
+                          done: task.done,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              task.done = value ?? false;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+}
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
+
 class _HomeScreenState extends State<HomeScreen> {
   String selectedFilter = "wszystkie";
 
@@ -78,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("KrakFlow"),
+        title: const Text("KrakFlow - Lokalnie"),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_sweep),
@@ -200,9 +296,7 @@ class AddTaskScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Nowe zadanie"),
-      ),
+      appBar: AppBar(title: const Text("Nowe zadanie")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -211,25 +305,19 @@ class AddTaskScreen extends StatelessWidget {
             TextField(
               controller: titleController,
               decoration: const InputDecoration(
-                labelText: "Tytuł zadania",
-                border: OutlineInputBorder(),
-              ),
+                  labelText: "Tytuł zadania", border: OutlineInputBorder()),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: deadlineController,
               decoration: const InputDecoration(
-                labelText: "Termin (np. jutro, 20.10)",
-                border: OutlineInputBorder(),
-              ),
+                  labelText: "Termin (np. jutro)", border: OutlineInputBorder()),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: priorityController,
               decoration: const InputDecoration(
-                labelText: "Priorytet (niski, średni, wysoki)",
-                border: OutlineInputBorder(),
-              ),
+                  labelText: "Priorytet", border: OutlineInputBorder()),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -250,6 +338,7 @@ class AddTaskScreen extends StatelessWidget {
     );
   }
 }
+
 class EditTaskScreen extends StatefulWidget {
   final Task task;
   const EditTaskScreen({super.key, required this.task});
@@ -288,11 +377,20 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(controller: titleController, decoration: const InputDecoration(labelText: "Tytuł", border: OutlineInputBorder())),
+            TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                    labelText: "Tytuł", border: OutlineInputBorder())),
             const SizedBox(height: 16),
-            TextField(controller: deadlineController, decoration: const InputDecoration(labelText: "Termin", border: OutlineInputBorder())),
+            TextField(
+                controller: deadlineController,
+                decoration: const InputDecoration(
+                    labelText: "Termin", border: OutlineInputBorder())),
             const SizedBox(height: 16),
-            TextField(controller: priorityController, decoration: const InputDecoration(labelText: "Priorytet", border: OutlineInputBorder())),
+            TextField(
+                controller: priorityController,
+                decoration: const InputDecoration(
+                    labelText: "Priorytet", border: OutlineInputBorder())),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
@@ -312,6 +410,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     );
   }
 }
+
 class TaskCard extends StatelessWidget {
   final String title;
   final String subtitle;
