@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:krakflowfluttersalik/task_repository.dart';
+import '../task_repository.dart';
 
 class TaskApiService {
   static const String baseUrl = "https://dummyjson.com";
@@ -14,6 +14,7 @@ class TaskApiService {
 
       return todos.map((todo) {
         return Task(
+          id: todo["id"],
           title: todo["todo"],
           deadline: "brak danych",
           done: todo["completed"],
